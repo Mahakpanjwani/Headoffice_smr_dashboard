@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -24,34 +24,40 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Extract application source
+      - name: Extract project files into repository
         run: |
-          mkdir -p app
-          unzip -q bilingual-call-compass.zip -d app
+          unzip -o bilingual-call-compass.zip -d .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Extract application source from project ZIP"
+            git push
+          fi
 
       - name: Install dependencies
-        working-directory: app
         run: bun install --frozen-lockfile
 
       - name: Build application
-        working-directory: app
         run: bun run build
 
       - name: Prepare Pages artifact
         run: |
-          if [ -d app/.output/public ]; then
-            cp -a app/.output/public ./pages-output
-          elif [ -d app/dist ]; then
-            cp -a app/dist ./pages-output
+          if [ -f .output/public/index.html ]; then
+            cp -a .output/public ./pages-output
+          elif [ -f dist/index.html ]; then
+            cp -a dist ./pages-output
           else
-            echo "No static output directory found. This app may require a server runtime rather than GitHub Pages."
-            find app/.output -maxdepth 3 -type d 2>/dev/null || true
+            echo "Build succeeded but no static index.html was generated. This app needs a server-capable host, not GitHub Pages."
+            find .output/public -maxdepth 2 -type f 2>/dev/null | head -50 || true
             exit 1
           fi
           touch pages-output/.nojekyll
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
