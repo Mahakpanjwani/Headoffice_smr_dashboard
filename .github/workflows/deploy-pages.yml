@@ -24,15 +24,17 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Extract project files into repository
+      - name: Extract project files into repository (first run only)
         run: |
-          unzip -o bilingual-call-compass.zip -d .
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "Extract application source from project ZIP"
-            git push
+          if [ ! -f package.json ]; then
+            unzip -o bilingual-call-compass.zip -d .
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            if ! git diff --cached --quiet; then
+              git commit -m "Extract application source from project ZIP"
+              git push
+            fi
           fi
 
       - name: Install dependencies
@@ -48,8 +50,8 @@ jobs:
           elif [ -f dist/index.html ]; then
             cp -a dist ./pages-output
           else
-            echo "Build succeeded but no static index.html was generated. This app needs a server-capable host, not GitHub Pages."
-            find .output/public -maxdepth 2 -type f 2>/dev/null | head -50 || true
+            echo "Build succeeded but no static index.html was generated. Check TanStack Start prerender configuration."
+            find .output/public -maxdepth 3 -type f 2>/dev/null | head -50 || true
             exit 1
           fi
           touch pages-output/.nojekyll
